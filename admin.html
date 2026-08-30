@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS Solar - Admin Control Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      background-color: #0b132b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body class="text-slate-100 p-4 md:p-8">
+
+  <!-- ================= ADMIN PIN / PASSWORD LOCK ================= -->
+  <div id="admin-lock-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl">
+      <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-3xl mx-auto">
+        🔒
+      </div>
+      <h2 class="text-xl font-black text-white">NEXUS ADMIN ACCESS</h2>
+      <p class="text-xs text-slate-400">Enter your master security password to access the control center.</p>
+      
+      <div class="space-y-3 pt-2">
+        <input id="admin-pass-input" type="password" placeholder="Enter Admin Password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-center text-sm tracking-widest text-amber-400 focus:outline-none focus:border-amber-500 font-mono" />
+        <button onclick="verifyAdminAccess()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-xl text-sm transition">
+          Unlock Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MASTER DASHBOARD ================= -->
+  <div id="admin-main-dashboard" class="hidden max-w-7xl mx-auto space-y-6">
+    
+    <header class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <div>
+        <h1 class="text-2xl font-black text-amber-400 tracking-wide">⚡ NEXUS SOLAR ADMIN</h1>
+        <p class="text-xs text-slate-400">Recharge verification, dynamic accounts, Telegram & WhatsApp settings</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 font-semibold">● System Live</span>
+        <button onclick="lockAdminPanel()" class="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 px-3 py-1 rounded-lg border border-rose-500/20">
+          Lock Panel
+        </button>
+      </div>
+    </header>
+
+    <!-- SECTION 1: DYNAMIC PAYMENT & SUPPORT CONFIGURATION -->
+    <section class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+      <h2 class="text-base font-bold text-amber-400">1. Deposit Account & Support Links Configuration</h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Method Type</label>
+          <input id="cfg-type" type="text" placeholder="Easypaisa / Bank / USDT TRC20" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Bank Name / Network</label>
+          <input id="cfg-bank" type="text" placeholder="Bank Name / Network" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Account Title</label>
+          <input id="cfg-title" type="text" placeholder="Account Title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Account / Wallet Address</label>
+          <input id="cfg-acc" type="text" placeholder="Account Number or USDT Address" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Telegram Channel Link</label>
+          <input id="cfg-telegram" type="text" placeholder="https://t.me/YourChannel" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">WhatsApp Support Number</label>
+          <input id="cfg-whatsapp" type="text" placeholder="e.g. +923001234567" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white" />
+        </div>
+      </div>
+
+      <button onclick="updateSettings()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition">
+        Update Customer App Settings
+      </button>
+    </section>
+
+    <!-- SECTION 2: PENDING RECHARGES -->
+    <section class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-amber-400">2. Pending Recharges (Includes Sender Name & 10% Auto Upliner Bonus)</h2>
+        <span id="recharge-badge" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-bold">0 Pending</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950 uppercase text-slate-400 text-[10px]">
+            <tr>
+              <th class="p-3">User</th>
+              <th class="p-3">Amount</th>
+              <th class="p-3">Sender Details</th>
+              <th class="p-3">TRX ID</th>
+              <th class="p-3">Date</th>
+              <th class="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recharge-table-body" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="6" class="p-4 text-center text-slate-500 italic">No pending requests.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PENDING WITHDRAWALS -->
+    <section class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-amber-400">3. Pending Withdrawals (3% Fee Auto-Deducted)</h2>
+        <span id="withdraw-badge" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-bold">0 Pending</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950 uppercase text-slate-400 text-[10px]">
+            <tr>
+              <th class="p-3">User</th>
+              <th class="p-3">Requested</th>
+              <th class="p-3 text-rose-400">Fee (3%)</th>
+              <th class="p-3 text-emerald-400 font-bold">Net Payable</th>
+              <th class="p-3">Payout Account</th>
+              <th class="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdraw-table-body" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="6" class="p-4 text-center text-slate-500 italic">No pending requests.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    const MASTER_ADMIN_PASS = "74248372";
+
+    // Admin Authentication Check
+    function verifyAdminAccess() {
+      const input = document.getElementById('admin-pass-input').value.trim();
+      if (input === MASTER_ADMIN_PASS) {
+        sessionStorage.setItem('nexus_admin_logged', 'true');
+        document.getElementById('admin-lock-screen').classList.add('hidden');
+        document.getElementById('admin-main-dashboard').classList.remove('hidden');
+        initializeAdminData();
+      } else {
+        alert("Incorrect Admin Password! Access Denied.");
+      }
+    }
+
+    function lockAdminPanel() {
+      sessionStorage.removeItem('nexus_admin_logged');
+      document.getElementById('admin-pass-input').value = '';
+      document.getElementById('admin-lock-screen').classList.remove('hidden');
+      document.getElementById('admin-main-dashboard').classList.add('hidden');
+    }
+
+    // Auto-check session on page reload
+    window.onload = function() {
+      if (sessionStorage.getItem('nexus_admin_logged') === 'true') {
+        document.getElementById('admin-lock-screen').classList.add('hidden');
+        document.getElementById('admin-main-dashboard').classList.remove('hidden');
+        initializeAdminData();
+      }
+    };
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQYHN21NC0SpTr25GVbPImkdkesCqvK3M",
+      authDomain: "earning-app-5d365.firebaseapp.com",
+      projectId: "earning-app-5d365",
+      storageBucket: "earning-app-5d365.firebasestorage.app",
+      messagingSenderId: "727202464009",
+      appId: "1:727202464009:web:3b35e0694bdcd58e7353d8",
+      measurementId: "G-V54PEWRTZE"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    function initializeAdminData() {
+      // Load Dynamic Settings
+      db.collection('payment_methods').doc('active_deposit_account').onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById('cfg-type').value = data.type || '';
+          document.getElementById('cfg-bank').value = data.bankName || '';
+          document.getElementById('cfg-title').value = data.title || '';
+          document.getElementById('cfg-acc').value = data.accountNumber || '';
+          document.getElementById('cfg-telegram').value = data.telegramLink || '';
+          document.getElementById('cfg-whatsapp').value = data.whatsappNumber || '';
+        }
+      });
+
+      // Pending Recharges Listener
+      db.collection('recharges').where('status', '==', 'pending').onSnapshot(snap => {
+        const tbody = document.getElementById('recharge-table-body');
+        document.getElementById('recharge-badge').innerText = `${snap.size} Pending`;
+
+        if (snap.empty) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 italic">No pending requests.</td></tr>';
+          return;
+        }
+
+        let html = '';
+        snap.forEach(doc => {
+          const data = doc.data();
+          const dateStr = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : '-';
+          html += `
+            <tr>
+              <td class="p-3 font-bold text-white">${data.userPhone}</td>
+              <td class="p-3 font-black text-emerald-400">PKR ${Number(data.amount).toLocaleString()}</td>
+              <td class="p-3 text-slate-300"><b>${data.senderName || '-'}</b><br><span class="text-[10px] text-slate-500">${data.senderNumber || '-'}</span></td>
+              <td class="p-3 font-mono text-amber-300 bg-slate-950/50 px-2 rounded">${data.trxId}</td>
+              <td class="p-3 text-slate-400">${dateStr}</td>
+              <td class="p-3 text-right space-x-2">
+                <button onclick="approveRecharge('${doc.id}', '${data.userId}', ${data.amount})" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+                  Approve (+10% Ref)
+                </button>
+                <button onclick="rejectRecharge('${doc.id}')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+                  Reject
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      });
+
+      // Pending Withdrawals Listener
+      db.collection('withdrawals').where('status', '==', 'pending').onSnapshot(snap => {
+        const tbody = document.getElementById('withdraw-table-body');
+        document.getElementById('withdraw-badge').innerText = `${snap.size} Pending`;
+
+        if (snap.empty) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 italic">No pending requests.</td></tr>';
+          return;
+        }
+
+        let html = '';
+        snap.forEach(doc => {
+          const data = doc.data();
+          html += `
+            <tr>
+              <td class="p-3 font-bold text-white">${data.userPhone}</td>
+              <td class="p-3">PKR ${Number(data.requestedAmount).toLocaleString()}</td>
+              <td class="p-3 text-rose-400">- PKR ${Number(data.fee).toFixed(2)}</td>
+              <td class="p-3 text-emerald-400 font-bold">PKR ${Number(data.netPayable).toLocaleString()}</td>
+              <td class="p-3 text-slate-300">
+                <b>${data.bankName}</b> - ${data.accountTitle}<br><span class="font-mono text-amber-400">${data.accountNumber}</span>
+              </td>
+              <td class="p-3 text-right space-x-2">
+                <button onclick="markWithdrawPaid('${doc.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+                  Mark Paid
+                </button>
+                <button onclick="rejectAndRefundWithdrawal('${doc.id}', '${data.userId}', ${data.requestedAmount})" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+                  Reject & Refund
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      });
+    }
+
+    async function updateSettings() {
+      const type = document.getElementById('cfg-type').value.trim();
+      const bank = document.getElementById('cfg-bank').value.trim();
+      const title = document.getElementById('cfg-title').value.trim();
+      const acc = document.getElementById('cfg-acc').value.trim();
+      const telegram = document.getElementById('cfg-telegram').value.trim();
+      const whatsapp = document.getElementById('cfg-whatsapp').value.trim();
+
+      try {
+        await db.collection('payment_methods').doc('active_deposit_account').set({
+          type: type,
+          bankName: bank,
+          title: title,
+          accountNumber: acc,
+          telegramLink: telegram,
+          whatsappNumber: whatsapp,
+          isActive: true,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("Settings updated successfully!");
+      } catch (err) {
+        alert("Update failed: " + err.message);
+      }
+    }
+
+    async function approveRecharge(rechargeId, userId, amount) {
+      if (!confirm(`Approve recharge of PKR ${amount}?`)) return;
+
+      try {
+        const batch = db.batch();
+        const userRef = db.collection('users').doc(userId);
+        const rechargeRef = db.collection('recharges').doc(rechargeId);
+
+        batch.update(userRef, { balance: firebase.firestore.FieldValue.increment(amount) });
+        batch.update(rechargeRef, { status: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+        const userSnap = await userRef.get();
+        if (userSnap.exists) {
+          const userData = userSnap.data();
+          if (userData.referredBy) {
+            const uplinerSnap = await db.collection('users').where('refCode', '==', userData.referredBy).limit(1).get();
+            if (!uplinerSnap.empty) {
+              const uplinerRef = uplinerSnap.docs[0].ref;
+              const bonus = amount * 0.10;
+              batch.update(uplinerRef, { balance: firebase.firestore.FieldValue.increment(bonus) });
+            }
+          }
+        }
+
+        await batch.commit();
+        alert("Recharge approved and 10% referral bonus sent to upliner!");
+      } catch (err) {
+        alert("Approval Failed: " + err.message);
+      }
+    }
+
+    async function rejectRecharge(rechargeId) {
+      if (!confirm("Reject this recharge?")) return;
+      await db.collection('recharges').doc(rechargeId).update({
+        status: 'rejected',
+        rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    async function markWithdrawPaid(withdrawId) {
+      if (!confirm("Confirm payment sent?")) return;
+      await db.collection('withdrawals').doc(withdrawId).update({
+        status: 'completed',
+        completedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Withdrawal marked as completed!");
+    }
+
+    async function rejectAndRefundWithdrawal(withdrawId, userId, amount) {
+      if (!confirm(`Reject payout and refund PKR ${amount} to user?`)) return;
+      try {
+        const batch = db.batch();
+        batch.update(db.collection('withdrawals').doc(withdrawId), { status: 'rejected' });
+        batch.update(db.collection('users').doc(userId), { balance: firebase.firestore.FieldValue.increment(amount) });
+        await batch.commit();
+        alert("Refunded successfully!");
+      } catch (err) {
+        alert("Action Failed: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
