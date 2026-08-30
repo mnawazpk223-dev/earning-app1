@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS Solar Power</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      background-color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .bottom-nav-active {
+      color: #f59e0b !important;
+    }
+    .custom-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+    }
+  </style>
+</head>
+<body class="text-slate-100 antialiased pb-24">
+
+  <!-- ================= AUTH SCREEN ================= -->
+  <div id="auth-section" class="min-h-screen flex items-center justify-center p-4">
+    <div class="custom-card w-full max-w-md p-8 rounded-3xl shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl mb-3 text-3xl">
+          ⚡
+        </div>
+        <h2 class="text-2xl font-black text-white tracking-wider">NEXUS SOLAR POWER</h2>
+        <p class="text-xs text-slate-400 mt-1">Sustainable Energy & Daily Returns</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number</label>
+          <input id="auth-phone" type="text" placeholder="03XXXXXXXXX" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+          <input id="auth-pass" type="password" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Referral Code (Optional)</label>
+          <input id="auth-ref" type="text" placeholder="e.g. NX1001" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm uppercase text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        
+        <div class="pt-2 space-y-2">
+          <button onclick="handleAuth(false)" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl text-sm transition">
+            Sign In
+          </button>
+          <button onclick="handleAuth(true)" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-sm transition border border-slate-700">
+            Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP ================= -->
+  <div id="main-app" class="hidden max-w-md mx-auto p-4 space-y-4">
+    
+    <!-- Top Header -->
+    <header class="flex justify-between items-center bg-slate-800/90 px-4 py-3 rounded-2xl border border-slate-700">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+          NX
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-400">Welcome,</p>
+          <p id="user-phone-display" class="text-xs font-bold text-white">03XXXXXXXXX</p>
+        </div>
+      </div>
+      <button onclick="handleLogout()" class="text-xs text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-lg hover:bg-rose-500/20">
+        Logout
+      </button>
+    </header>
+
+    <!-- Wallet Balance Card -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-600 text-slate-950 p-6 rounded-3xl shadow-xl">
+      <span class="text-xs uppercase tracking-wider font-bold opacity-80">Available Balance</span>
+      <div class="flex items-baseline space-x-2 mt-1">
+        <span class="text-sm font-bold">PKR</span>
+        <h1 id="user-balance" class="text-3xl font-black">0</h1>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-slate-950/20 flex justify-between items-center text-xs">
+        <div>
+          <span class="opacity-75">My Referral Code: </span>
+          <span id="user-ref-code" class="font-mono font-black bg-slate-950/20 px-2 py-0.5 rounded">------</span>
+        </div>
+        <button onclick="copyRefCode()" class="bg-slate-950 text-amber-400 font-bold px-3 py-1 rounded-full text-xs">
+          Copy Code
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: PACKAGES (HOME) -->
+    <section id="tab-home" class="space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-white text-sm">Solar Units Available</h3>
+        <span class="text-[11px] bg-amber-500/20 text-amber-400 font-semibold px-2 py-0.5 rounded-full">7 Days Plan</span>
+      </div>
+      <div id="packages-list" class="space-y-3"></div>
+    </section>
+
+    <!-- TAB 2: ACTIVE PLANS (ACTIVITIES) -->
+    <section id="tab-active" class="hidden space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-white text-sm">My Active Solar Units</h3>
+        <span class="text-[11px] text-slate-400">Live Production</span>
+      </div>
+      <div id="user-active-packages" class="space-y-3">
+        <p class="text-xs text-slate-400 italic">No active investment packages yet.</p>
+      </div>
+    </section>
+
+    <!-- TAB 3: RECHARGE -->
+    <section id="tab-recharge" class="hidden space-y-4">
+      <div class="custom-card p-5 rounded-3xl space-y-4">
+        <h3 class="font-bold text-amber-400 text-sm">Deposit / Recharge Funds</h3>
+        
+        <!-- Live Admin Account Display -->
+        <div class="p-4 bg-slate-900 rounded-2xl border border-amber-500/30 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-amber-400 font-bold">
+            <span>OFFICIAL DEPOSIT ACCOUNT</span>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Live</span>
+          </div>
+          <p class="text-slate-300">Method: <b id="pay-type" class="text-white">Loading...</b></p>
+          <p class="text-slate-300">Bank / Network: <b id="pay-bank" class="text-white">Loading...</b></p>
+          <p class="text-slate-300">Account Title: <b id="pay-title" class="text-white">Loading...</b></p>
+          <div class="flex items-center justify-between bg-slate-800 p-2.5 rounded-xl border border-slate-700 mt-2">
+            <span id="pay-acc" class="font-mono font-bold text-amber-400 text-sm tracking-wide">----------</span>
+            <button onclick="copyDepositNumber()" class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1 rounded-lg">Copy</button>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Recharge Amount (PKR)</label>
+            <input id="recharge-amount" type="number" placeholder="Min 500" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Sender Name</label>
+            <input id="recharge-sender-name" type="text" placeholder="Your Name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Sender Mobile / Account / Wallet Address</label>
+            <input id="recharge-sender" type="text" placeholder="Sender Account Number" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Transaction ID (TRX / Ref ID)</label>
+            <input id="recharge-trx" type="text" placeholder="TRX ID" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <button onclick="submitRechargeRequest()" id="submit-recharge-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl text-sm transition">
+            Submit Recharge
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: WITHDRAW -->
+    <section id="tab-withdraw" class="hidden space-y-4">
+      <div class="custom-card p-5 rounded-3xl space-y-4">
+        <h3 class="font-bold text-amber-400 text-sm">Withdraw Earnings</h3>
+        <div class="bg-slate-900 p-3 rounded-2xl text-xs space-y-1 text-slate-400 border border-slate-800">
+          <p>• Minimum Withdrawal: <b class="text-white">500 PKR</b></p>
+          <p>• Auto Service Fee: <b class="text-rose-400">3% Deducted Automatically</b></p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Amount (PKR)</label>
+            <input id="withdraw-amount" type="number" placeholder="Min 500" oninput="updateWithdrawPreview()" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div class="p-3 bg-slate-900 rounded-xl flex justify-between items-center text-xs border border-slate-800">
+            <span class="text-slate-400">Net You Receive (-3%):</span>
+            <span id="net-withdraw-preview" class="font-black text-emerald-400 text-sm">0 PKR</span>
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Bank / Wallet Type</label>
+            <input id="withdraw-bank" type="text" placeholder="e.g. Easypaisa / JazzCash / Bank" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Account Title</label>
+            <input id="withdraw-title" type="text" placeholder="Account Name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-300 block mb-1">Account / IBAN Number</label>
+            <input id="withdraw-acc" type="text" placeholder="Account Number" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <button onclick="submitWithdrawalRequest()" id="submit-withdraw-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition">
+            Request Payout
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: SUPPORT -->
+    <section id="tab-support" class="hidden space-y-4">
+      <div class="custom-card p-6 rounded-3xl text-center space-y-4">
+        <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-3xl mx-auto">
+          💬
+        </div>
+        <h3 class="text-lg font-bold text-white">NEXUS Official Support</h3>
+        <p class="text-xs text-slate-400">Join our community channel or chat with official support for immediate assistance.</p>
+        
+        <div class="space-y-3 pt-2">
+          <a id="btn-telegram-link" href="#" target="_blank" class="block w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs transition">
+            📢 Join Telegram Channel
+          </a>
+          <a id="btn-whatsapp-link" href="#" target="_blank" class="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition">
+            🟢 WhatsApp Live Support
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around items-center py-2 text-[10px] text-slate-400 z-50">
+      <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center bottom-nav-active">
+        <span class="text-base">🏠</span>
+        <span>Home</span>
+      </button>
+      <button onclick="switchTab('active')" id="nav-active" class="flex flex-col items-center">
+        <span class="text-base">📊</span>
+        <span>Active</span>
+      </button>
+      <button onclick="switchTab('recharge')" id="nav-recharge" class="flex flex-col items-center">
+        <span class="text-base">⚡</span>
+        <span>Recharge</span>
+      </button>
+      <button onclick="switchTab('withdraw')" id="nav-withdraw" class="flex flex-col items-center">
+        <span class="text-base">💸</span>
+        <span>Withdraw</span>
+      </button>
+      <button onclick="switchTab('support')" id="nav-support" class="flex flex-col items-center">
+        <span class="text-base">💬</span>
+        <span>Support</span>
+      </button>
+    </nav>
+
+  </div>
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQYHN21NC0SpTr25GVbPImkdkesCqvK3M",
+      authDomain: "earning-app-5d365.firebaseapp.com",
+      projectId: "earning-app-5d365",
+      storageBucket: "earning-app-5d365.firebasestorage.app",
+      messagingSenderId: "727202464009",
+      appId: "1:727202464009:web:3b35e0694bdcd58e7353d8",
+      measurementId: "G-V54PEWRTZE"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const SOLAR_PACKAGES = [
+      { id: '2kv', name: '2 kVA Nexus Unit', price: 3000, daily: 210, weekly: 1470, days: 7 },
+      { id: '5kv', name: '5 kVA Nexus Unit', price: 5000, daily: 350, weekly: 2450, days: 7 },
+      { id: '10kv', name: '10 kVA Nexus Unit', price: 10000, daily: 700, weekly: 4900, days: 7 },
+      { id: '20kv', name: '20 kVA Nexus Unit', price: 20000, daily: 1400, weekly: 9800, days: 7 },
+      { id: '35kv', name: '35 kVA Nexus Unit', price: 35000, daily: 2450, weekly: 17150, days: 7 },
+      { id: '50kv', name: '50 kVA Nexus Unit', price: 50000, daily: 3500, weekly: 24500, days: 7 },
+      { id: '75kv', name: '75 kVA Industrial Grid', price: 75000, daily: 5250, weekly: 36750, days: 7 },
+      { id: '100kv', name: '100 kVA Commercial Grid', price: 100000, daily: 7000, weekly: 49000, days: 7 }
+    ];
+
+    let currentUser = null;
+    let userProfile = { phone: '', balance: 0, refCode: '------' };
+
+    window.handleAuth = async function(isSignUp) {
+      const phone = document.getElementById('auth-phone').value.trim();
+      const pass = document.getElementById('auth-pass').value.trim();
+      const refCode = document.getElementById('auth-ref').value.trim().toUpperCase();
+
+      if (!phone || phone.length < 10) return alert("Please enter valid mobile number.");
+      if (!pass || pass.length < 6) return alert("Password must be at least 6 characters.");
+
+      const email = `${phone}@nexusenergy.internal`;
+
+      try {
+        if (isSignUp) {
+          const cred = await auth.createUserWithEmailAndPassword(email, pass);
+          const generatedCode = 'NX' + Math.random().toString(36).substring(2, 6).toUpperCase();
+          
+          await db.collection('users').doc(cred.user.uid).set({
+            phone: phone,
+            balance: 0,
+            refCode: generatedCode,
+            referredBy: refCode || null,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert("Account registered successfully!");
+        } else {
+          await auth.signInWithEmailAndPassword(email, pass);
+        }
+      } catch (err) {
+        alert("Authentication Error: " + err.message);
+      }
+    };
+
+    window.handleLogout = function() {
+      auth.signOut();
+    };
+
+    window.switchTab = function(tabId) {
+      const tabs = ['home', 'active', 'recharge', 'withdraw', 'support'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (sec) sec.classList.toggle('hidden', t !== tabId);
+        if (nav) nav.classList.toggle('bottom-nav-active', t === tabId);
+      });
+    };
+
+    window.renderSolarPackages = function() {
+      const container = document.getElementById('packages-list');
+      if (!container) return;
+      container.innerHTML = SOLAR_PACKAGES.map(pkg => `
+        <div class="custom-card p-4 rounded-2xl flex items-center justify-between hover:border-amber-500/50 transition">
+          <div>
+            <h4 class="font-bold text-white text-sm">${pkg.name}</h4>
+            <p class="text-xs text-slate-400">Price: <b class="text-amber-400">PKR ${pkg.price.toLocaleString()}</b></p>
+            <div class="mt-1 flex items-center space-x-2 text-[10px]">
+              <span class="text-amber-300 font-semibold">Daily: PKR ${pkg.daily}</span>
+              <span class="text-slate-600">•</span>
+              <span class="text-emerald-400 font-semibold">Weekly: PKR ${pkg.weekly.toLocaleString()}</span>
+            </div>
+          </div>
+          <button onclick="buySolarPackage('${pkg.id}')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-xl transition">
+            Invest
+          </button>
+        </div>
+      `).join('');
+    };
+
+    window.buySolarPackage = async function(pkgId) {
+      const pkg = SOLAR_PACKAGES.find(p => p.id === pkgId);
+      if (!pkg) return;
+
+      if (!userProfile || userProfile.balance < pkg.price) {
+        alert("Insufficient balance! Please recharge first.");
+        window.switchTab('recharge');
+        return;
+      }
+
+      if (!confirm(`Confirm investing in ${pkg.name} for PKR ${pkg.price.toLocaleString()}?`)) return;
+
+      try {
+        const batch = db.batch();
+        const userRef = db.collection('users').doc(currentUser.uid);
+        const orderRef = db.collection('user_packages').doc();
+
+        batch.update(userRef, { balance: firebase.firestore.FieldValue.increment(-pkg.price) });
+
+        const now = new Date();
+        const expiryDate = new Date(now.getTime() + pkg.days * 24 * 60 * 60 * 1000);
+
+        batch.set(orderRef, {
+          userId: currentUser.uid,
+          userPhone: userProfile.phone,
+          packageId: pkg.id,
+          packageName: pkg.name,
+          price: pkg.price,
+          dailyProfit: pkg.daily,
+          totalProfit: pkg.weekly,
+          expiresAt: expiryDate,
+          purchasedAt: now,
+          status: 'active'
+        });
+
+        await batch.commit();
+        alert(`Successfully activated ${pkg.name}!`);
+        window.switchTab('active');
+      } catch (e) {
+        alert("Transaction failed: " + e.message);
+      }
+    };
+
+    window.copyDepositNumber = function() {
+      const num = document.getElementById('pay-acc').innerText;
+      if (num && num !== '----------') {
+        navigator.clipboard.writeText(num);
+        alert("Account / Wallet Copied!");
+      }
+    };
+
+    window.copyRefCode = function() {
+      if (userProfile && userProfile.refCode) {
+        navigator.clipboard.writeText(userProfile.refCode);
+        alert("Referral Code Copied: " + userProfile.refCode);
+      }
+    };
+
+    window.updateWithdrawPreview = function() {
+      const amount = Number(document.getElementById('withdraw-amount').value) || 0;
+      const net = amount >= 500 ? amount * 0.97 : 0;
+      document.getElementById('net-withdraw-preview').innerText = `${net.toFixed(2)} PKR`;
+    };
+
+    window.submitRechargeRequest = async function() {
+      const amount = Number(document.getElementById('recharge-amount').value);
+      const senderName = document.getElementById('recharge-sender-name').value.trim();
+      const senderNumber = document.getElementById('recharge-sender').value.trim();
+      const trxId = document.getElementById('recharge-trx').value.trim();
+
+      if (!amount || amount < 500) return alert("Minimum recharge amount is PKR 500.");
+      if (!senderName) return alert("Please enter Sender Name.");
+      if (!senderNumber) return alert("Please enter Sender Account / Number.");
+      if (!trxId) return alert("Please enter TRX ID / Transaction Hash.");
+
+      const btn = document.getElementById('submit-recharge-btn');
+      btn.disabled = true;
+      btn.innerText = "Submitting...";
+
+      try {
+        await db.collection('recharges').add({
+          userId: currentUser.uid,
+          userPhone: userProfile.phone || currentUser.email.split('@')[0],
+          senderName: senderName,
+          senderNumber: senderNumber,
+          amount: amount,
+          trxId: trxId,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert("Recharge submitted! Admin will verify and credit your wallet.");
+        document.getElementById('recharge-amount').value = '';
+        document.getElementById('recharge-sender-name').value = '';
+        document.getElementById('recharge-sender').value = '';
+        document.getElementById('recharge-trx').value = '';
+        window.switchTab('home');
+      } catch (err) {
+        alert("Submission Failed: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Submit Recharge";
+      }
+    };
+
+    window.submitWithdrawalRequest = async function() {
+      const amount = Number(document.getElementById('withdraw-amount').value);
+      const bank = document.getElementById('withdraw-bank').value.trim();
+      const title = document.getElementById('withdraw-title').value.trim();
+      const acc = document.getElementById('withdraw-acc').value.trim();
+
+      if (!amount || amount < 500) return alert("Minimum withdrawal is 500 PKR.");
+      if (!userProfile || userProfile.balance < amount) return alert("Insufficient wallet balance.");
+      if (!bank || !title || !acc) return alert("Please fill all fields.");
+
+      const deduction = amount * 0.03;
+      const netPayable = amount - deduction;
+
+      if (!confirm(`Withdraw PKR ${amount}? (Net Received: PKR ${netPayable.toFixed(2)})`)) return;
+
+      const btn = document.getElementById('submit-withdraw-btn');
+      btn.disabled = true;
+      btn.innerText = "Processing...";
+
+      try {
+        const batch = db.batch();
+        const userRef = db.collection('users').doc(currentUser.uid);
+        const withdrawRef = db.collection('withdrawals').doc();
+
+        batch.update(userRef, { balance: firebase.firestore.FieldValue.increment(-amount) });
+        batch.set(withdrawRef, {
+          userId: currentUser.uid,
+          userPhone: userProfile.phone || currentUser.email.split('@')[0],
+          requestedAmount: amount,
+          fee: deduction,
+          netPayable: netPayable,
+          bankName: bank,
+          accountTitle: title,
+          accountNumber: acc,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await batch.commit();
+        alert("Withdrawal placed successfully!");
+        document.getElementById('withdraw-amount').value = '';
+        document.getElementById('withdraw-bank').value = '';
+        document.getElementById('withdraw-title').value = '';
+        document.getElementById('withdraw-acc').value = '';
+        window.switchTab('home');
+      } catch (err) {
+        alert("Withdrawal Failed: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Request Payout";
+      }
+    };
+
+    // Listeners
+    auth.onAuthStateChanged((user) => {
+      const authSec = document.getElementById('auth-section');
+      const mainApp = document.getElementById('main-app');
+      if (user) {
+        currentUser = user;
+        authSec.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+
+        const fallbackPhone = user.email ? user.email.split('@')[0] : 'User';
+        document.getElementById('user-phone-display').innerText = fallbackPhone;
+
+        window.renderSolarPackages();
+
+        // Realtime User Document
+        db.collection('users').doc(user.uid).onSnapshot(doc => {
+          if (doc.exists) {
+            userProfile = doc.data();
+            document.getElementById('user-phone-display').innerText = userProfile.phone || fallbackPhone;
+            document.getElementById('user-balance').innerText = Number(userProfile.balance || 0).toLocaleString();
+            document.getElementById('user-ref-code').innerText = userProfile.refCode || '------';
+          }
+        });
+
+        // Dynamic Payment & Support Settings
+        db.collection('payment_methods').doc('active_deposit_account').onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            document.getElementById('pay-type').innerText = data.type || 'Easypaisa / Bank / USDT';
+            document.getElementById('pay-bank').innerText = data.bankName || 'Direct';
+            document.getElementById('pay-title').innerText = data.title || '-';
+            document.getElementById('pay-acc').innerText = data.accountNumber || '-';
+
+            if (data.telegramLink) document.getElementById('btn-telegram-link').href = data.telegramLink;
+            if (data.whatsappNumber) document.getElementById('btn-whatsapp-link').href = `https://wa.me/${data.whatsappNumber.replace(/[^0-9]/g, '')}`;
+          }
+        });
+
+        // Active Packages List
+        db.collection('user_packages').where('userId', '==', user.uid).where('status', '==', 'active').onSnapshot(snap => {
+          const container = document.getElementById('user-active-packages');
+          if (snap.empty) {
+            container.innerHTML = '<p class="text-xs text-slate-400 italic">No active investment packages yet.</p>';
+            return;
+          }
+          let html = '';
+          const now = Date.now();
+          snap.forEach(doc => {
+            const data = doc.data();
+            const expTime = data.expiresAt ? data.expiresAt.toDate().getTime() : now;
+            const diffDays = Math.max(0, Math.ceil((expTime - now) / (1000 * 60 * 60 * 24)));
+            html += `
+              <div class="custom-card p-4 rounded-2xl space-y-2 border border-amber-500/30">
+                <div class="flex justify-between items-center">
+                  <h4 class="font-bold text-white text-xs">${data.packageName}</h4>
+                  <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
+                  <div>Daily Earning: <b class="text-amber-400">PKR ${data.dailyProfit}</b></div>
+                  <div>Remaining: <b class="text-white">${diffDays} Days Left</b></div>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        });
+
+      } else {
+        currentUser = null;
+        userProfile = { phone: '', balance: 0, refCode: '------' };
+        authSec.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
