@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Energy Platform - Master Admin Panel</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs (v10 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      background-color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 antialiased p-4 md:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Top Bar -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <div>
+        <div class="flex items-center space-x-3">
+          <span class="text-3xl">☀️</span>
+          <div>
+            <h1 class="text-2xl font-black text-white tracking-tight">Solar Admin Command Center</h1>
+            <p class="text-xs text-slate-400">Manage recharges, automatic 10% upliner bonuses, dynamic accounts & payouts</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          ● System Live & Connected
+        </span>
+      </div>
+    </header>
+
+    <!-- SECTION 1: DYNAMIC RECHARGE ACCOUNT MANAGEMENT -->
+    <section class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700/60 shadow-xl space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-amber-400">1. Recharge Deposit Account Configuration</h2>
+          <p class="text-xs text-slate-400">Change this anytime. The new number will instantly show on all customer apps.</p>
+        </div>
+        <span class="text-xs bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full border border-amber-500/20 font-mono">Dynamic Config</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          
