@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Energy Investment - Customer Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs (v10 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-amber-500 selection:text-white pb-24">
+
+  <!-- ================= AUTH SCREEN ================= -->
+  <div id="auth-section" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md p-8 rounded-2xl shadow-xl border border-slate-200">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-100 text-amber-600 rounded-full mb-3 shadow-inner">
+          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Solar Invest Hub</h2>
+        <p class="text-xs text-slate-500 mt-1">Earn daily returns by investing in clean energy units</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mobile Number</label>
+          <input id="auth-phone" type="text" placeholder="03001234567" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+          <input id="auth-pass" type="password" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white" />
+        </div>
+        <div id="ref-field-container">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Referral Code (Optional)</label>
+          <input id="auth-ref" type="text" placeholder="e.g. SL98X2" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white" />
+        </div>
+        
+        <div class="pt-2 space-y-2">
+          <button onclick="handleAuth(false)" id="login-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md shadow-amber-500/20 active:scale-[0.98]">
+            Sign In
+          </button>
+          <button onclick="handleAuth(true)" id="signup-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm transition-all active:scale-[0.98]">
+            Create New Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP ================= -->
+  <div id="main-app" class="hidden max-w-md mx-auto p-4 space-y-5">
+    
+    <!-- Top Header -->
+    <header class="flex justify-between items-center bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-100">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs">
+          ⚡
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Welcome back,</p>
+          <p id="user-phone-display" class="text-xs font-bold text-slate-800">03XXXXXXXXX</p>
+        </div>
+      </div>
+      <button onclick="handleLogout()" class="text-xs text-rose-500 font-semibold bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition">
+        Logout
+      </button>
+    </header>
+
+    <!-- Wallet Balance Card -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-600 text-white p-6 rounded-3xl shadow-xl shadow-amber-500/20">
+      <div class="relative z-10">
+        <span class="text-xs uppercase tracking-wider font-semibold opacity-80">Available Wallet Balance</span>
+        <div class="flex items-baseline space-x-2 mt-1">
+          <span class="text-sm font-bold">PKR</span>
+          <h1 id="user-balance" class="text-3xl font-black tracking-tight">0</h1>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-white/20 flex justify-between items-center text-xs">
+          <div>
+            <span class="opacity-75">My Referral Code: </span>
+            <span id="user-ref-code" class="font-mono font-bold tracking-wider bg-white/20 px-2 py-0.5 rounded">------</span>
+          </div>
+          <button onclick="copyRefCode()" class="bg-white text-amber-700 font-bold px-3 py-1 rounded-full shadow-sm active:scale-95">
+            Copy Code
+          </button>
+        </div>
+      </div>
+      <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+    </div>
+
+    <!-- Quick Action Navigation -->
+    <div class="grid grid-cols-3 gap-3">
+      <button onclick="switchTab('packages')" id="btn-tab-packages" class="p-3 bg-white border border-slate-200 rounded-2xl text-center shadow-sm hover:border-amber-400 transition active:scale-95">
+        <span class="text-xl block mb-1">📦</span>
+        <span class="text-xs font-bold text-slate-700">Packages</span>
+      </button>
+      <button onclick="switchTab('recharge')" id="btn-tab-recharge" class="p-3 bg-white border border-slate-200 rounded-2xl text-center shadow-sm hover:border-amber-400 transition active:scale-95">
+        <span class="text-xl block mb-1">⚡</span>
+        <span class="text-xs font-bold text-slate-700">Recharge</span>
+      </button>
+      <button onclick="switchTab('withdraw')" id="btn-tab-withdraw" class="p-3 bg-white border border-slate-200 rounded-2xl text-center shadow-sm hover:border-amber-400 transition active:scale-95">
+        <span class="text-xl block mb-1">💸</span>
+        <span class="text-xs font-bold text-slate-700">Withdraw</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: SOLAR PACKAGES -->
+    <section id="tab-packages" class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-black text-slate-900 text-base tracking-tight">Solar Power Investment Units</h3>
+        <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full">7-Day Return</span>
+      </div>
+
+      <div id="packages-list" class="space-y-3">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: RECHARGE / DEPOSIT -->
+    <section id="tab-recharge" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-black text-slate-900 text-base">Deposit / Recharge Wallet</h3>
+        
+        <!-- Live Admin Account Display -->
+        <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
+          <div class="flex items-center justify-between text-xs text-amber-800 font-bold">
+            <span>OFFICIAL RECHARGE ACCOUNT</span>
+            <span class="text-[10px] bg-amber-200 px-2 py-0.5 rounded-full text-amber-900">Live</span>
+          </div>
+          <div class="text-xs space-y-1 text-slate-700">
+            <p>Account Type: <b id="pay-type" class="text-slate-900">Loading...</b></p>
+            <p>Bank / Service: <b id="pay-bank" class="text-slate-900">Loading...</b></p>
+            <p>Account Title: <b id="pay-title" class="text-slate-900">Loading...</b></p>
+            <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-100 mt-2">
+              <span id="pay-acc" class="font-mono font-black text-amber-700 text-sm tracking-wide">----------</span>
+              <button onclick="copyDepositNumber()" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded-lg">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Sent Amount (PKR)</label>
+            <input id="recharge-amount" type="number" placeholder="Min 500" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Transaction ID (TRX / Ref ID)</label>
+            <input id="recharge-trx" type="text" placeholder="e.g. 289410982" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Payment Proof Screenshot</label>
+            <input id="recharge-file" type="file" accept="image/*" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-white hover:file:bg-amber-600" />
+          </div>
+          <button onclick="submitRechargeRequest()" id="submit-recharge-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm transition shadow-md shadow-amber-500/20">
+            Submit Recharge Request
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: WITHDRAW -->
+    <section id="tab-withdraw" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-black text-slate-900 text-base">Withdraw Funds</h3>
+        
+        <div class="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-600">
+          <p>• Minimum Withdrawal: <b class="text-slate-800">500 PKR</b></p>
+          <p>• Auto Service Fee: <b class="text-rose-600">3% Deducted Automatically</b></p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Withdraw Amount (PKR)</label>
+            <input id="withdraw-amount" type="number" placeholder="Enter amount (min 500)" oninput="updateWithdrawPreview()" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+
+          <div class="p-3 bg-slate-100 rounded-xl flex justify-between items-center text-xs">
+            <span class="text-slate-500">Net You Will Receive (-3%):</span>
+            <span id="net-withdraw-preview" class="font-black text-emerald-600 text-sm">0 PKR</span>
+          </div>
+
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Wallet / Bank Name</label>
+            <input id="withdraw-bank" type="text" placeholder="e.g. Easypaisa / Meezan Bank" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Account Title</label>
+            <input id="withdraw-title" type="text" placeholder="e.g. Arsalan Khan" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Account / IBAN / Mobile Number</label>
+            <input id="withdraw-acc" type="text" placeholder="e.g. 03001234567" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+
+          <button onclick="submitWithdrawalRequest()" id="submit-withdraw-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md shadow-emerald-600/20">
+            Request Payout
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Active Units -->
+    <section class="space-y-3">
+      <h4 class="font-bold text-slate-800 text-sm">My Active Solar Investments</h4>
+      <div id="user-active-packages" class="space-y-2">
+        <p class="text-xs text-slate-400 italic">No active investment packages yet.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    // Replace with your Firebase keys
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    const SOLAR_PACKAGES = [
+      { id: '2kv', name: '2 kVA Solar Unit', price: 3000, daily: 210, weekly: 1470, days: 7 },
+      { id: '5kv', name: '5 kVA Solar Unit', price: 5000, daily: 350, weekly: 2450, days: 7 },
+      { id: '10kv', name: '10 kVA Solar Unit', price: 10000, daily: 700, weekly: 4900, days: 7 },
+      { id: '20kv', name: '20 kVA Solar Unit', price: 20000, daily: 1400, weekly: 9800, days: 7 },
+      { id: '35kv', name: '35 kVA Solar Unit', price: 35000, daily: 2450, weekly: 17150, days: 7 },
+      { id: '50kv', name: '50 kVA Solar Unit', price: 50000, daily: 3500, weekly: 24500, days: 7 },
+      { id: '75kv', name: '75 kVA Commercial Grid', price: 75000, daily: 5250, weekly: 36750, days: 7 },
+      { id: '100kv', name: '100 kVA Industrial Grid', price: 100000, daily: 7000, weekly: 49000, days: 7 }
+    ];
+
+    let currentUser = null;
+    let userProfile = null;
+    let activeDepositAccount = null;
+
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        initUserDashboard(user.uid);
+      } else {
+        currentUser = null;
+        userProfile = null;
+        document.getElementById('auth-section').classList.remove('hidden');
+        document.getElementById('main-app').classList.add('hidden');
+      }
+    });
+
+    async function handleAuth(isSignUp) {
+      const phone = document.getElementById('auth-phone').value.trim();
+      const pass = document.getElementById('auth-pass').value.trim();
+      const refCode = document.getElementById('auth-ref').value.trim().toUpperCase();
+
+      if (!phone || phone.length < 10) return alert("Please enter a valid phone number.");
+      if (!pass || pass.length < 6) return alert("Password must be at least 6 characters.");
+
+      const email = `${phone}@solarenergy.internal`;
+
+      try {
+        if (isSignUp) {
+          const cred = await auth.createUserWithEmailAndPassword(email, pass);
+          const generatedCode = 'SL' + Math.random().toString(36).substring(2, 6).toUpperCase();
+          
+          await db.collection('users').doc(cred.user.uid).set({
+            phone: phone,
+            balance: 0,
+            refCode: generatedCode,
+            referredBy: refCode || null,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert("Account registered successfully!");
+        } else {
+          await auth.signInWithEmailAndPassword(email, pass);
+        }
+      } catch (err) {
+        alert("Authentication Error: " + err.message);
+      }
+    }
+
+    function handleLogout() {
+      auth.signOut();
+    }
+
+    function initUserDashboard(uid) {
+      db.collection('users').doc(uid).onSnapshot(doc => {
+        if (doc.exists) {
+          userProfile = doc.data();
+          document.getElementById('user-phone-display').innerText = userProfile.phone;
+          document.getElementById('user-balance').innerText = Number(userProfile.balance).toLocaleString();
+          document.getElementById('user-ref-code').innerText = userProfile.refCode;
+        }
+      });
+
+      renderSolarPackages();
+      listenToPaymentAccount();
+      listenToUserActivePackages(uid);
+    }
+
+    function renderSolarPackages() {
+      const container = document.getElementById('packages-list');
+      container.innerHTML = SOLAR_PACKAGES.map(pkg => `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-amber-400 transition">
+          <div>
+            <h4 class="font-bold text-slate-800 text-sm">${pkg.name}</h4>
+            <p class="text-xs text-slate-500">Price: <b class="text-slate-800">PKR ${pkg.price.toLocaleString()}</b></p>
+            <div class="mt-1 flex items-center space-x-2 text-[11px]">
+              <span class="text-amber-700 font-bold">Daily: PKR ${pkg.daily}</span>
+              <span class="text-slate-300">•</span>
+              <span class="text-emerald-700 font-bold">Weekly: PKR ${pkg.weekly.toLocaleString()}</span>
+            </div>
+          </div>
+          <button onclick="buySolarPackage('${pkg.id}')" class="bg-slate-900 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition active:scale-95 shadow">
+            Invest
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function buySolarPackage(pkgId) {
+      const pkg = SOLAR_PACKAGES.find(p => p.id === pkgId);
+      if (!pkg) return;
+
+      if (!userProfile || userProfile.balance < pkg.price) {
+        alert("Insufficient balance! Please recharge your account first.");
+        switchTab('recharge');
+        return;
+      }
+
+      const confirmBuy = confirm(`Confirm buying ${pkg.name} for PKR ${pkg.price.toLocaleString()}?`);
+      if (!confirmBuy) return;
+
+      try {
+        const batch = db.batch();
+        const userRef = db.collection('users').doc(currentUser.uid);
+        const orderRef = db.collection('user_packages').doc();
+
+        batch.update(userRef, { balance: firebase.firestore.FieldValue.increment(-pkg.price) });
+
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + pkg.days);
+
+        batch.set(orderRef, {
+          userId: currentUser.uid,
+          userPhone: userProfile.phone,
+          packageId: pkg.id,
+          packageName: pkg.name,
+          price: pkg.price,
+          dailyProfit: pkg.daily,
+          totalProfit: pkg.weekly,
+          expiresAt: expiryDate,
+          status: 'active',
+          purchasedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await batch.commit(
